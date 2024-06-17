@@ -14,7 +14,7 @@ const AnimeSearch = () => {
     _.debounce((title) => {
         console.log('Debounced fetchAnimeData called with title:', title); // Debug log
         fetchAnimeData(title);
-    }, 500),
+    }, 250),
     []
   );
 
