@@ -3,6 +3,7 @@ import { AnimeContext } from './AnimeContext';
 import _ from 'lodash';
 
 const AnimeSearch = () => {
+  // Get the animeTitle, setAnimeTitle, animeData, error, and fetchAnimeData from the AnimeContext
   const { animeTitle, setAnimeTitle, animeData, error, fetchAnimeData } = useContext(AnimeContext);
 
 
@@ -11,6 +12,7 @@ const AnimeSearch = () => {
         // 300ms is the delay between each call
   const debouncedFetchAnimeData = useCallback(
     _.debounce((title) => {
+        console.log('Debounced fetchAnimeData called with title:', title); // Debug log
         fetchAnimeData(title);
     }, 500),
     []
@@ -22,6 +24,7 @@ const AnimeSearch = () => {
   const handleInputChange = (e) => {
     const title = e.target.value;
     setAnimeTitle(title);
+    console.log('Input changed:', title); // Debug log
     debouncedFetchAnimeData(title);
   };
 
@@ -53,6 +56,21 @@ const AnimeSearch = () => {
         <button type="submit">Search</button>
       </form>
 
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+
+        {animeData && animeData.length > 0 && (
+        <div>
+          <h2>Anime Titles:</h2>
+          {animeData.map((anime) => (
+            <div key={anime.id}>
+              <h3>{anime.title.romaji}</h3>
+              <p><strong>English Title:</strong> {anime.title.english || 'N/A'}</p>
+              <p><strong>Native Title:</strong> {anime.title.native}</p>
+            </div>
+          ))}
+        </div>
+      )} 
+    
     </div>
   );
 }

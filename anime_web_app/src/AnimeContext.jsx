@@ -27,7 +27,7 @@ export const AnimeProvider = ({ children }) => {
             console.log(data); // Debug log
 
             if (response.ok) {
-                setAnimeData(data);
+                setAnimeData(data.data.Page.media);
                 setError(null);
             } else {
                 setError(data.error);
