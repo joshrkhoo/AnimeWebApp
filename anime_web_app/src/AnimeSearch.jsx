@@ -2,11 +2,11 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { AnimeContext } from './AnimeContext';
 import _ from 'lodash';
 import { formatDistanceToNow, isPast, isFuture } from 'date-fns';
+import './AnimeSearch.css';
 
-const AnimeSearch = () => {
+const AnimeSearch = ({onSelectAnime}) => {
   // Get the animeTitle, setAnimeTitle, animeData, error, and fetchAnimeData from the AnimeContext
   const { animeTitle, setAnimeTitle, animeData, error, fetchAnimeData } = useContext(AnimeContext);
-  const [selectedAnimes, setSelectedAnimes] = useState([]);
 
 
   // Debounce the fetchAnimeData function
@@ -36,21 +36,11 @@ const AnimeSearch = () => {
   };
 
 
-  const handleSubmit = (e) => {
-    /*
-    Handles form submission
-    called when the form is submitted
-    */
-
-
-    e.preventDefault();
-    fetchAnimeData(animeTitle);
-  };
-
   // Function to handle selecting an anime
   const handleSelectAnime = (anime) => {
-    setSelectedAnimes([...selectedAnimes, anime]);
-  }
+    console.log('Selected anime:', anime); // Debug log
+    onSelectAnime(anime);
+  };
 
 
 
@@ -66,60 +56,38 @@ const AnimeSearch = () => {
     const time = new Date(Date.now() + timeInSeconds * 1000);
     if (isPast(time)) {
       return 'Already aired';
+    }else if (isFuture(time)) {
+      return formatDistanceToNow(time, { addSuffix: true });
     }
-    if (timeInSeconds == null){
-        return 'No airing schedule available'
-    }
-    return formatDistanceToNow(time, { addSuffix: false });
+    return 'NA'
+
     };
 
 
-  // Log the anime data when it is updated
-  useEffect(() => {
-    console.log("Anime data updated:", animeData); // Debug log
-  }, [animeData]);
-
-
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Enter an anime title"
-          value={animeTitle}
-          onChange={handleInputChange}
-        />
-        <button type="submit">Search</button>
-      </form>
-
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-
-        {animeData && animeData.length > 0 && (
-        <div>
-          <h2>Anime Titles:</h2>
-          {animeData.map((anime) => (
-            <div key={anime.id}>
-              <h3>{anime.title.romaji}</h3>
-              <p><strong>English Title:</strong> {anime.title.english || 'N/A'}</p>
-              <p><strong>Native Title:</strong> {anime.title.native}</p>
-              <p><strong>Next Episode:</strong></p>
-              <ul>
-                {anime.airingSchedule.edges.map((edge, index) => (
-                  <li key={index}>
-                    Time until episode {edge.node.episode} airs: {formatTimeUntilAiring(edge.node.timeUntilAiring)}
-                  </li>
-                ))}
-                <button onClick={() => handleSelectAnime(anime)} Add to Schedule> </button>
-
-              </ul>
-            </div>
-          ))}
-        </div>
-      )} 
-
+    <div className="search-container">
+        <form onSubmit={(e) => e.preventDefault()}>
+            <input
+                type="text"
+                placeholder="Enter an anime title"
+                value={animeTitle}
+                onChange={handleInputChange}
+                className="search-input"
+            />
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+            {animeData && animeData.length > 0 && (
+                <ul className="search-dropdown">
+                    {animeData.map((anime) => (
+                        <li key={anime.id} onClick={() => handleSelectAnime(anime)}>
+                            <strong>{anime.title.romaji}</strong> ({anime.title.english || 'N/A'})
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </form>
     </div>
-  );
-}
+);
+};
 
 
 

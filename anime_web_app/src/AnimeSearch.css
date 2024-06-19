@@ -1,0 +1,47 @@
+/* AnimeSearch.css */
+.search-container {
+    margin: 20px;
+    display: flex;
+    justify-content: left;
+  }
+  
+  .search-bar {
+    width: 300px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .search-dropdown {
+    border: 1px solid #ccc;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 0;
+    list-style-type: none;
+    width: 300px;
+  }
+  
+  .search-dropdown li {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .search-dropdown li:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .selected-animes {
+    margin-top: 20px;
+  }
+  
+  .selected-anime {
+    margin-bottom: 20px;
+  }
+  
+  .selected-anime img {
+    width: 100px;
+    display: block;
+  }
+  
