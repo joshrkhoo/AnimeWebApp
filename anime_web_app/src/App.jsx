@@ -9,10 +9,15 @@ const App = () =>{
   const [selectedAnimes, setSelectedAnimes] = useState([]);
 
   const handleSelectAnime = (anime) => {
-    console.log('Selected anime:', anime); // Debug log
-    setSelectedAnimes((prevSelectedAnimes) => [...prevSelectedAnimes, anime]);
-    console.log('Selected animes:', selectedAnimes); // Debug log
-  }
+    const isAlreadySelected = selectedAnimes.some(selectedAnime => selectedAnime.id === anime.id);
+
+    // If the anime is not already selected, add it to the list of selected animes
+    if (!isAlreadySelected) {
+      setSelectedAnimes([...selectedAnimes, anime]);
+    } else {
+      console.log(`Anime with ID ${anime.id} is already selected.`);
+    }
+  };
 
 
 
