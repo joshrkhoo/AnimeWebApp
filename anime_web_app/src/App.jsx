@@ -6,34 +6,15 @@ import AnimeScheduler from './AnimeScheduler';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// Helper: fetch anime details by ID from AniList
+// Helper: fetch anime details by ID from backend proxy
 async function fetchAnimeById(id) {
-  const query = `
-    query ($id: Int) {
-      Media(id: $id, type: ANIME) {
-        id
-        title { romaji english native }
-        coverImage { extraLarge large medium }
-        airingSchedule {
-          edges {
-            node {
-              airingAt
-              timeUntilAiring
-              episode
-            }
-          }
-        }
-      }
-    }
-  `;
-  const variables = { id };
-  const response = await fetch('https://graphql.anilist.co', {
+  const response = await fetch('http://127.0.0.1:5000/fetchAnimeById', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables })
+    body: JSON.stringify({ id })
   });
   const data = await response.json();
-  return data.data.Media;
+  return data;
 }
 
 const App = () => {
