@@ -63,8 +63,7 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoade
     }, [schedule, hasLoaded]);
 
     return (
-        <div className="schedule-container">
-            {/* Check if there are any animes scheduled */}
+        <div className="schedule-week-container">
             {daysOfWeek.map(day => (
                 schedule[day] && schedule[day].length > 0 && (
                     <div key={day} className="day-schedule">
