@@ -19,18 +19,46 @@
     display: flex;
     flex-direction: row;
     justify-content: center;
-    gap: 16px;
     margin-bottom: 32px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     width: 100%;
-    max-width: none;
-    overflow-x: auto;
+    max-width: 1200px;
+}
+
+.schedule-header-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 8px;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    flex-wrap: wrap;
+}
+
+.schedule-header-cell {
+    flex: 1 1 250px;
+    min-width: 250px;
+    max-width: 350px;
+    text-align: center;
+    font-weight: bold;
+    color: #222;
+    font-size: 1.1em;
+    background: none;
+    padding-bottom: 4px;
+    margin-right: 0;
+}
+
+.schedule-header-cell:not(:last-child) {
+    margin-right: 16px;
 }
 
 .day-schedule {
-    flex: 1 1 200px; /* Grow, shrink, min width */
-    min-width: 200px;
-    max-width: 250px;
+    flex: 1 1 250px;
+    min-width: 250px;
+    max-width: 400px;
+    margin-right: 0;
     margin-bottom: 20px;
     padding: 10px;
     border: 1px solid #ccc;
@@ -38,12 +66,12 @@
     background-color: #f9f9f9;
 }
 
+.day-schedule:not(:last-child) {
+    margin-right: 16px;
+}
+
 .day-schedule h3 {
-    margin: 0;
-    padding: 10px;
-    background-color: #4CAF50;
-    color: white;
-    border-radius: 5px 5px 0 0;
+    display: none;
 }
 
 .day-schedule ul {
@@ -76,6 +104,16 @@ input[type="text"] {
     border-radius: 4px;
 }
 
+.day-label {
+    text-align: center;
+    font-weight: bold;
+    color: #222;
+    font-size: 1.4em;
+    margin-bottom: 12px;
+    background: none;
+    border: none;
+}
+
 @media (max-width: 600px) {
     .schedule-container {
         padding: 10px;
@@ -92,4 +130,19 @@ input[type="text"] {
     .day-schedule li strong {
         font-size: 1em;
     }
+}
+
+.anime-schedule-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.anime-schedule-img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
 }

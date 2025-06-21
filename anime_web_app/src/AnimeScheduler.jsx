@@ -64,20 +64,31 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoade
 
     return (
         <div className="schedule-week-container">
-            {daysOfWeek.map(day => (
-                schedule[day] && schedule[day].length > 0 && (
-                    <div key={day} className="day-schedule">
-                        <h3>{day}</h3>
-                        <ul>
-                            {/* Iterate over each anime scheduled for the day */}
-                            {schedule[day].map(anime => (
-                                <li key={`${anime.id}-${anime.episode}`}>
-                                    <strong>{anime.title.romaji}</strong> - Episode {anime.episode} - {anime.airing_time ? `${new Date(anime.airing_time).toLocaleDateString()}, ${new Date(anime.airing_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}` : 'Aired'}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )
+            {daysOfWeek.filter(day => schedule[day] && schedule[day].length > 0).map(day => (
+                <div key={day} className="day-schedule">
+                    <div className="day-label">{day}</div>
+                    <ul>
+                        {schedule[day] && schedule[day].map(anime => (
+                            <li key={`${anime.id}-${anime.episode}`} className="anime-schedule-item">
+                                {anime.coverImage && (
+                                    <img
+                                        src={anime.coverImage.medium || anime.coverImage.large || anime.coverImage.extraLarge}
+                                        alt={anime.title.romaji}
+                                        className="anime-schedule-img"
+                                    />
+                                )}
+                                <div className="anime-schedule-info">
+                                    <div className="anime-title">{anime.title.romaji}</div>
+                                    <div className="anime-date">
+                                        {anime.airing_time
+                                            ? `${new Date(anime.airing_time).toLocaleDateString()}, ${new Date(anime.airing_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`
+                                            : 'Aired'}
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             ))}
         </div>
     );
