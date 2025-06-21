@@ -19,13 +19,23 @@ const App = () =>{
     }
   };
 
-
+  // Handler to update selectedAnimes when schedule is loaded
+  const handleScheduleLoaded = (loadedSchedule) => {
+    // Flatten the schedule into a list of animes
+    const animes = [];
+    Object.values(loadedSchedule).forEach(dayList => {
+      dayList.forEach(anime => {
+        animes.push(anime);
+      });
+    });
+    setSelectedAnimes(animes);
+  };
 
   return(
       <div>
           <AnimeProvider>
             <AnimeSearch onSelectAnime={handleSelectAnime}/>
-            <AnimeScheduler selectedAnimes={selectedAnimes}/>
+            <AnimeScheduler selectedAnimes={selectedAnimes} onScheduleLoaded={handleScheduleLoaded}/>
           </AnimeProvider>
       </div>
   )

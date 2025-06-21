@@ -8,6 +8,16 @@ const AnimeSearch = ({onSelectAnime}) => {
   // Get the animeTitle, setAnimeTitle, animeData, error, and fetchAnimeData from the AnimeContext
   const { animeTitle, setAnimeTitle, animeData, error, fetchAnimeData } = useContext(AnimeContext);
 
+  // Add state for notification message
+  const [notification, setNotification] = useState('');
+
+  // Hide notification after 0.7 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(''), 700);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   // Debounce the fetchAnimeData function
     // This will prevent the fetchAnimeData function from being called too frequently when the user types quickly
@@ -38,30 +48,23 @@ const AnimeSearch = ({onSelectAnime}) => {
 
   // Function to handle selecting an anime
   const handleSelectAnime = (anime) => {
-    console.log('Selected anime:', anime); // Debug log
-    onSelectAnime(anime);
+    // Check if the anime has any future episodes
+    let hasFutureEpisode = false;
+    if (anime.airingSchedule && anime.airingSchedule.edges && anime.airingSchedule.edges.length > 0) {
+      hasFutureEpisode = anime.airingSchedule.edges.some(edge => edge.node.timeUntilAiring >= 0);
+    }
+    if (!hasFutureEpisode) {
+      setNotification('This anime has already aired.');
+      return;
+    } else {
+      setNotification(''); // Clear any previous notification
+      onSelectAnime(anime);
+    }
   };
 
 
 
   console.log('Rendering AnimeSearch component'); // Debugging log
-
-  
-  const formatTimeUntilAiring = (timeInSeconds) => {
-    /* 
-    This Function takes a time in seconds and returns a human-readable string
-    uses the date-fns library to format the time until the anime airs
-    */
-
-    const time = new Date(Date.now() + timeInSeconds * 1000);
-    if (isPast(time)) {
-      return 'Already aired';
-    }else if (isFuture(time)) {
-      return formatDistanceToNow(time, { addSuffix: true });
-    }
-    return 'NA'
-
-    };
 
 
   return (
@@ -75,6 +78,8 @@ const AnimeSearch = ({onSelectAnime}) => {
                 className="search-input"
             />
             {error && <p style={{ color: 'red' }}>{error}</p>}
+            {/* Notification message */}
+            {notification && <div className="notification-message">{notification}</div>}
             {animeData && animeData.length > 0 && (
                 <ul className="search-dropdown">
                     {animeData.map((anime) => (

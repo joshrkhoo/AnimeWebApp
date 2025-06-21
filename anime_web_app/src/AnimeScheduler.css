@@ -1,0 +1,72 @@
+/* AnimeScheduler.css */
+
+.schedule-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.day-schedule {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.day-schedule h3 {
+    margin: 0;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px 5px 0 0;
+}
+
+.day-schedule ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.day-schedule li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.day-schedule li:last-child {
+    border-bottom: none;
+}
+
+.day-schedule li strong {
+    display: block;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 20px 0;
+    box-sizing: border-box;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+    .schedule-container {
+        padding: 10px;
+    }
+
+    .day-schedule h3 {
+        font-size: 1.2em;
+    }
+
+    .day-schedule li {
+        padding: 5px;
+    }
+
+    .day-schedule li strong {
+        font-size: 1em;
+    }
+}

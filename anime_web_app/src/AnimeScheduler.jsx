@@ -1,9 +1,9 @@
-import { set } from 'lodash';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import './AnimeScheduler.css';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-const AnimeScheduler = ({ selectedAnimes = [] }) => {
+const AnimeScheduler = ({ selectedAnimes = [], onScheduleLoaded }) => {
     const [schedule, setSchedule] = useState({
         Monday: [],
         Tuesday: [],
@@ -14,6 +14,8 @@ const AnimeScheduler = ({ selectedAnimes = [] }) => {
         Sunday: []
     });
 
+    // Track if this is the initial load
+    const isInitialLoad = useRef(true);
 
     const parseScheduleDates = (schedule) => {
         /*
@@ -35,11 +37,14 @@ const AnimeScheduler = ({ selectedAnimes = [] }) => {
 
     const loadSchedule = async () => {
         try{
-            const response = await fetch('http://127.0.0.1:5000/getSchedule');
+            const response = await fetch('http://127.0.0.1:5000/loadSchedule');
             const data = await response.json();
             const parsedData = parseScheduleDates(data);
-            console.log(data);
+            console.log('Loading saved schedule: ', parsedData);
             setSchedule(parsedData);
+            if (onScheduleLoaded) {
+                onScheduleLoaded(parsedData);
+            }
         }catch(err){
             console.error('An error occurred while fetching the schedule:', err);
         }
@@ -60,89 +65,64 @@ const AnimeScheduler = ({ selectedAnimes = [] }) => {
         }
 
     };
+    
 
     useEffect(() => {
         loadSchedule();
     }, []);
 
     useEffect(() => {
-        saveSchedule();
+        if (Object.keys(schedule).length > 0){
+            saveSchedule(schedule);
+        }
     }, [schedule]);
 
-
-
     useEffect(() => {
-        console.log('Selected animes in AnimeScheduler:', selectedAnimes);
-
-        const newSchedule = {
-            Monday: [],
-            Tuesday: [],
-            Wednesday: [],
-            Thursday: [],
-            Friday: [],
-            Saturday: [],
-            Sunday: []
-        };
-        
-
+        // Skip the first run (initial load)
+        if (isInitialLoad.current) {
+            isInitialLoad.current = false;
+            return;
+        }
+        // Only rebuild and save schedule after initial load
+        const newSchedule = { ...schedule };
         selectedAnimes.forEach(anime => {
-            console.log('Anime object:', anime); // Log the entire anime object
-
-            // Check if the anime has an airing schedule
             if (anime.airingSchedule && anime.airingSchedule.edges) {
-
-                // Iterate over the airing schedule
-                anime.airingSchedule.edges.forEach(edge => {
-
-                    // Get the airing time and time until airing
-                        // multiply by 1000 to convert seconds to milliseconds for the Date object
-                            // Date object converts milliseconds to a human-readable date
-                    const airingTime = edge.node.airingAt ? new Date(edge.node.airingAt * 1000) : null;
-
-                    // Convert the time until airing from seconds to milliseconds
-                    const timeUntilAiring = edge.node.timeUntilAiring;
-                    
-                    // Check if the airing time is valid
-                        // If the airing time is not valid, log a warning and return
-                    if (!airingTime || timeUntilAiring < 0) {
-                        console.warn(`Episode ${edge.node.episode} of ${anime.title.romaji} has already aired or has invalid airing time.`);
-                        return;
-                    }
-                    
-                    console.log('Airing time:', airingTime);
-                    
-                    // Get the airing date
-                    const airingDay = airingTime.toLocaleDateString('en-AU', { weekday: 'long' });
-                    console.log('Airing day:', airingDay);
-                    
-                    // Add the anime to the schedule
-                    if (newSchedule[airingDay]) {
-                        newSchedule[airingDay].push({
+                const upcomingEpisodes = anime.airingSchedule.edges
+                    .map(edge => {
+                        return {
                             ...anime,
-                            airing_time: airingTime,
-                            episode: edge.node.episode
-                        });
+                            airing_time: edge.node.airingAt ? new Date(edge.node.airingAt * 1000) : null,
+                            episode: edge.node.episode,
+                            timeUntilAiring: edge.node.timeUntilAiring
+                        };
+                    })
+                    .filter(ep => ep.airing_time && ep.timeUntilAiring >= 0)
+                    .sort((a, b) => a.airing_time - b.airing_time);
 
-                        // Sort the anime by airing time in ascending order
+                if (upcomingEpisodes.length > 0) {
+                    const nextEpisode = upcomingEpisodes[0];
+                    const airingDay = nextEpisode.airing_time.toLocaleDateString('en-US', { weekday: 'long' });
+
+                    if (newSchedule[airingDay]) {
+                        newSchedule[airingDay].push(nextEpisode);
                         newSchedule[airingDay].sort((a, b) => a.airing_time - b.airing_time);
                     }
-                });
+                }
             }
         });
-
-        console.log('New schedule:', newSchedule);
-
-        // Update the schedule state
         setSchedule(newSchedule);
+        saveSchedule(newSchedule);
     }, [selectedAnimes]);
 
     return (
         <div className="schedule-container">
+            {/* Check if there are any animes scheduled */}
             {daysOfWeek.map(day => (
                 schedule[day].length > 0 && (
                     <div key={day} className="day-schedule">
                         <h3>{day}</h3>
                         <ul>
+                            {/* Iterate over each anime scheduled for the day */}
                             {schedule[day].map(anime => (
                                 <li key={`${anime.id}-${anime.episode}`}>
                                     <strong>{anime.title.romaji}</strong> - Episode {anime.episode} - {anime.airing_time ? `${anime.airing_time.toLocaleDateString()}, ${anime.airing_time.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}` : 'Aired'}
