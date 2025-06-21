@@ -6,6 +6,36 @@ import AnimeScheduler from './AnimeScheduler';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+// Helper: fetch anime details by ID from AniList
+async function fetchAnimeById(id) {
+  const query = `
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        title { romaji english native }
+        coverImage { extraLarge large medium }
+        airingSchedule {
+          edges {
+            node {
+              airingAt
+              timeUntilAiring
+              episode
+            }
+          }
+        }
+      }
+    }
+  `;
+  const variables = { id };
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables })
+  });
+  const data = await response.json();
+  return data.data.Media;
+}
+
 const App = () => {
   // Use schedule as the main state
   const [schedule, setSchedule] = useState({
@@ -55,8 +85,38 @@ const App = () => {
   };
 
   // Handler to update schedule when loaded from backend
-  const handleScheduleLoaded = (loadedSchedule) => {
-    setSchedule(loadedSchedule);
+  const handleScheduleLoaded = async (loadedSchedule) => {
+    // For each anime in the loaded schedule, fetch latest data and get the next episode
+    const updatedSchedule = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: [] };
+    const animeIds = [];
+    Object.values(loadedSchedule).forEach(dayList => {
+      dayList.forEach(anime => {
+        if (!animeIds.includes(anime.id)) animeIds.push(anime.id);
+      });
+    });
+    // Fetch latest data for each anime
+    const animeDataList = await Promise.all(animeIds.map(id => fetchAnimeById(id)));
+    animeDataList.forEach(anime => {
+      if (anime && anime.airingSchedule && anime.airingSchedule.edges) {
+        const upcomingEpisodes = anime.airingSchedule.edges
+          .map(edge => {
+            return {
+              ...anime,
+              airing_time: edge.node.airingAt ? new Date(edge.node.airingAt * 1000) : null,
+              episode: edge.node.episode,
+              timeUntilAiring: edge.node.timeUntilAiring
+            };
+          })
+          .filter(ep => ep.airing_time && ep.timeUntilAiring >= 0)
+          .sort((a, b) => a.airing_time - b.airing_time);
+        if (upcomingEpisodes.length > 0) {
+          const nextEpisode = upcomingEpisodes[0];
+          const airingDay = nextEpisode.airing_time.toLocaleDateString('en-US', { weekday: 'long' });
+          updatedSchedule[airingDay].push(nextEpisode);
+        }
+      }
+    });
+    setSchedule(updatedSchedule);
     setHasLoaded(true);
   };
 
