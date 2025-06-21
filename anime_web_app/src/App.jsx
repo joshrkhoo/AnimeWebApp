@@ -126,7 +126,7 @@ const App = () => {
   };
 
   return (
-    <div>
+    <div className="main-content">
       <AnimeProvider>
         <AnimeSearch onSelectAnime={handleSelectAnime} />
         <AnimeScheduler schedule={schedule} onScheduleLoaded={handleScheduleLoaded} onScheduleChange={handleScheduleChange} hasLoaded={hasLoaded} />

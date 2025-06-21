@@ -69,7 +69,7 @@ const AnimeSearch = ({onSelectAnime}) => {
 
   return (
     <div className="search-container">
-        <form onSubmit={(e) => e.preventDefault()}>
+        <form onSubmit={(e) => e.preventDefault()} className="search-form-row">
             <input
                 type="text"
                 placeholder="Enter an anime title"
@@ -77,9 +77,8 @@ const AnimeSearch = ({onSelectAnime}) => {
                 onChange={handleInputChange}
                 className="search-input"
             />
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            {/* Notification message */}
             {notification && <div className="notification-message">{notification}</div>}
+            {error && <p style={{ color: 'red' }}>{error}</p>}
             {animeData && animeData.length > 0 && (
                 <ul className="search-dropdown">
                     {animeData.map((anime) => (
