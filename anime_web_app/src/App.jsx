@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import AnimeSearch from './AnimeSearch';
 import { AnimeProvider } from './AnimeContext';
-import './App.css';
+import './AnimeStyle/App.css';
 import AnimeScheduler from './AnimeScheduler';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const apiUrl = 'https://animewebappapi.onrender.com';
+const apiUrlLocal = 'http://127.0.0.1:5000';
+
 // Helper: fetch anime details by ID from backend proxy
 async function fetchAnimeById(id) {
-  const response = await fetch('http://127.0.0.1:5000/fetchAnimeById', {
+  const response = await fetch(`${apiUrlLocal}/fetchAnimeById`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })

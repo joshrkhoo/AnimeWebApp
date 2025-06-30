@@ -2,7 +2,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { AnimeContext } from './AnimeContext';
 import _ from 'lodash';
 import { formatDistanceToNow, isPast, isFuture } from 'date-fns';
-import './AnimeSearch.css';
+import './AnimeStyle/AnimeSearch.css';
 
 const AnimeSearch = ({onSelectAnime}) => {
   // Get the animeTitle, setAnimeTitle, animeData, error, and fetchAnimeData from the AnimeContext
@@ -48,13 +48,17 @@ const AnimeSearch = ({onSelectAnime}) => {
 
   // Function to handle selecting an anime
   const handleSelectAnime = (anime) => {
-    // Check if the anime has any future episodes
+    /*
+    Handles animes selected from dropdown
+    If no future episodes then alert, else select anime to be added to the schedule
+    */
+
     let hasFutureEpisode = false;
     if (anime.airingSchedule && anime.airingSchedule.edges && anime.airingSchedule.edges.length > 0) {
       hasFutureEpisode = anime.airingSchedule.edges.some(edge => edge.node.timeUntilAiring >= 0);
     }
     if (!hasFutureEpisode) {
-      setNotification('This anime has already aired.');
+      setNotification('This anime has already aired / Has no airring date');
       return;
     } else {
       setNotification(''); // Clear any previous notification
