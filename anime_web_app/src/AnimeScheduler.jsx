@@ -1,9 +1,12 @@
 import React, { useEffect } from 'react';
-import './AnimeScheduler.css';
+import './AnimeStyle/AnimeScheduler.css';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoaded }) => {
+    const apiUrl = 'https://animewebappapi.onrender.com';
+    const apiUrlLocal = 'http://127.0.0.1:5000';
+
     const parseScheduleDates = (schedule) => {
         /*
         Parse schedule to ensure dates are Date objects
@@ -24,7 +27,7 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoade
 
     const loadSchedule = async () => {
         try {
-            const response = await fetch('http://127.0.0.1:5000/loadSchedule');
+            const response = await fetch(`${apiUrlLocal}/loadSchedule`);
             const data = await response.json();
             const parsedData = parseScheduleDates(data);
             console.log('Loading saved schedule: ', parsedData);
@@ -38,7 +41,7 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoade
 
     const saveSchedule = async (newSchedule) => {
         try {
-            await fetch('http://127.0.0.1:5000/saveSchedule', {
+            await fetch(`${apiUrlLocal}/saveSchedule`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
