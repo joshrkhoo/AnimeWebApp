@@ -11,7 +11,7 @@ const AnimeSearch = ({onSelectAnime}) => {
   // Add state for notification message
   const [notification, setNotification] = useState('');
 
-  // Hide notification after 0.7 seconds
+  // Hide notification after 5 seconds
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(''), 5000);
@@ -81,7 +81,6 @@ const AnimeSearch = ({onSelectAnime}) => {
                 onChange={handleInputChange}
                 className="search-input"
             />
-            {notification && <div className="notification-message">{notification}</div>}
             {error && <p style={{ color: 'red' }}>{error}</p>}
             {animeData && animeData.length > 0 && (
                 <ul className="search-dropdown">
@@ -93,6 +92,7 @@ const AnimeSearch = ({onSelectAnime}) => {
                 </ul>
             )}
         </form>
+        {notification && <div className="notification-message">{notification}</div>}
     </div>
 );
 };
