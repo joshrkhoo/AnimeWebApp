@@ -56,17 +56,17 @@ const App = () => {
           // Keep all anime properties
           ...anime,
 
-          // Keep epoch seconds, not date object
-          airing_time: edge.node.airingAt ?? null,
+          // Convert to Date object for consistency (airingAt is in seconds)
+          airing_time: edge.node.airingAt ? new Date(edge.node.airingAt * 1000) : null,
           episode: edge.node.episode,
           timeUntilAiring: edge.node.timeUntilAiring,
         }))
         // filter out episodes without airing_time or already aired
         .filter(
-          (ep) => Number.isFinite(ep.airing_time) && ep.timeUntilAiring >= 0
+          (ep) => ep.airing_time && ep.timeUntilAiring >= 0
         )
         // sort by airing_time
-        .sort(byAirTime);
+        .sort((a, b) => a.airing_time - b.airing_time);
     }
     
     // If no episodes from airingSchedule, fall back to nextAiringEpisode
@@ -76,7 +76,8 @@ const App = () => {
       if (nextEp.airingAt && nextEp.timeUntilAiring >= 0) {
         upcomingEpisodes = [{
           ...anime,
-          airing_time: nextEp.airingAt,
+          // Convert to Date object for consistency (airingAt is in seconds)
+          airing_time: new Date(nextEp.airingAt * 1000),
           episode: nextEp.episode,
           timeUntilAiring: nextEp.timeUntilAiring,
         }];
@@ -104,7 +105,12 @@ const App = () => {
           )
         ) {
           updatedDay.push(nextEpisode);
-          updatedDay.sort((a, b) => a.airing_time - b.airing_time);
+          updatedDay.sort((a, b) => {
+            // Handle both Date objects and numbers for sorting
+            const timeA = a.airing_time instanceof Date ? a.airing_time.getTime() : a.airing_time;
+            const timeB = b.airing_time instanceof Date ? b.airing_time.getTime() : b.airing_time;
+            return timeA - timeB;
+          });
         }
         return {
           ...prevSchedule,
@@ -191,7 +197,11 @@ const App = () => {
       
       if (upcomingEpisodes.length > 0) {
         const nextEpisode = upcomingEpisodes[0];
-        const airingDay = dayOfWeek(nextEpisode.airing_time);
+        // dayOfWeek expects seconds, so convert Date to seconds if needed
+        const airingTimeSeconds = nextEpisode.airing_time instanceof Date
+          ? Math.floor(nextEpisode.airing_time.getTime() / 1000)
+          : nextEpisode.airing_time;
+        const airingDay = dayOfWeek(airingTimeSeconds);
         updatedSchedule[airingDay].push(nextEpisode);
       }
     });
