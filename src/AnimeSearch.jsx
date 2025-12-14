@@ -81,6 +81,7 @@ const AnimeSearch = ({onSelectAnime}) => {
                 onChange={handleInputChange}
                 className="search-input"
             />
+            {notification && <div className="notification-message">{notification}</div>}
             {error && <p style={{ color: 'red' }}>{error}</p>}
             {animeData && animeData.length > 0 && (
                 <ul className="search-dropdown">
@@ -92,7 +93,6 @@ const AnimeSearch = ({onSelectAnime}) => {
                 </ul>
             )}
         </form>
-        {notification && <div className="notification-message">{notification}</div>}
     </div>
 );
 };
