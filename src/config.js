@@ -1,22 +1,16 @@
 // API Configuration
-// Uses environment variables to determine which API URL to use
-// In development: uses REACT_APP_API_URL from .env file (defaults to localhost:5000)
-// In production: uses REACT_APP_API_URL from .env.production (defaults to production URL)
+// CRA environment variables are resolved at BUILD time
+// Set REACT_APP_API_URL in .env.production for production builds
+// Set REACT_APP_API_URL in .env.development (or .env) for local development
 
-const getApiUrl = () => {
-  // Check if REACT_APP_API_URL is set in environment variables
-  if (process.env.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
-  }
-  
-  // Default fallback based on environment
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://animewebappapi.onrender.com';
-  }
-  
-  // Default to local for development
-  return 'http://127.0.0.1:5000';
-};
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  'https://animewebappapi.onrender.com';
 
-export const API_URL = getApiUrl();
+console.log("API_URL (baked):", API_URL);
+console.log("REACT_APP_API_URL:", process.env.REACT_APP_API_URL);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+
+
+export { API_URL };
 
