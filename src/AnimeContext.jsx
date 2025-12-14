@@ -1,9 +1,7 @@
 import React, { createContext, useState } from 'react';
+import { API_URL } from './config';
 
 export const AnimeContext = createContext();
-
-const apiUrl = 'https://animewebappapi.onrender.com';
-const apiUrlLocal = 'http://127.0.0.1:5000';
 
 export const AnimeProvider = ({ children }) => {
     const [animeTitle, setAnimeTitle] = useState('');
@@ -14,7 +12,7 @@ export const AnimeProvider = ({ children }) => {
         console.log("Fetching data for:", {title});
 
         try {
-            const response = await fetch(`${apiUrlLocal}/api`, {
+            const response = await fetch(`${API_URL}/api`, {
                 method: 'POST',
 
                 headers: {
