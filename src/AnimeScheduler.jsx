@@ -11,8 +11,6 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDelete
         Parse schedule to ensure dates are Date objects
         
         We need to convert the dates from strings to Date objects so we can sort them otherwise they will be sorted as strings which will cause an error
-        
-        Backend returns airing_time as Unix timestamp in SECONDS, but JavaScript Date expects MILLISECONDS
         */
 
         const newSchedule = {};
@@ -20,12 +18,7 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDelete
         for (const day in schedule) {
             newSchedule[day] = schedule[day].map(anime => ({
                 ...anime,
-                // Convert seconds to milliseconds by multiplying by 1000
-                airing_time: anime.airing_time 
-                    ? (typeof anime.airing_time === 'number' 
-                        ? new Date(anime.airing_time * 1000) 
-                        : new Date(anime.airing_time))
-                    : null
+                airing_time: new Date(anime.airing_time)
             }));
         }
         return newSchedule;
@@ -107,47 +100,35 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDelete
                 <div key={day} className="day-schedule">
                     <div className="day-label">{day}</div>
                     <ul>
-                        {schedule[day] && schedule[day].map(anime => {
-                            // Handle both string and object formats for title and coverImage
-                            const titleText = typeof anime.title === 'string' 
-                                ? anime.title 
-                                : (anime.title?.romaji || anime.title?.english || '');
-                            const coverImageUrl = typeof anime.coverImage === 'string'
-                                ? anime.coverImage
-                                : (anime.coverImage?.medium || anime.coverImage?.large || anime.coverImage?.extraLarge || '');
-                            
-                            return (
-                                <li key={`${anime.id}-${anime.episode}`} className="anime-schedule-item">
-                                    {coverImageUrl && (
-                                        <img
-                                            src={coverImageUrl}
-                                            alt={titleText}
-                                            className="anime-schedule-img"
-                                        />
-                                    )}
-                                    <div className="anime-schedule-info">
-                                        <div className="anime-title">{titleText}</div>
-                                        <div className="anime-date">
-                                            {anime.airing_time
-                                                ? (anime.airing_time instanceof Date
-                                                    ? `${anime.airing_time.toLocaleDateString()}, ${anime.airing_time.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`
-                                                    : `${new Date(anime.airing_time * 1000).toLocaleDateString()}, ${new Date(anime.airing_time * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`)
-                                                : 'Aired'}
-                                        </div>
+                        {schedule[day] && schedule[day].map(anime => (
+                            <li key={`${anime.id}-${anime.episode}`} className="anime-schedule-item">
+                                {anime.coverImage && (
+                                    <img
+                                        src={anime.coverImage.medium || anime.coverImage.large || anime.coverImage.extraLarge}
+                                        alt={anime.title.romaji}
+                                        className="anime-schedule-img"
+                                    />
+                                )}
+                                <div className="anime-schedule-info">
+                                    <div className="anime-title">{anime.title.romaji}</div>
+                                    <div className="anime-date">
+                                        {anime.airing_time
+                                            ? `${new Date(anime.airing_time).toLocaleDateString()}, ${new Date(anime.airing_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`
+                                            : 'Aired'}
                                     </div>
-                                    {onDeleteAnime && (
-                                        <button
-                                            className="delete-anime-btn"
-                                            onClick={() => onDeleteAnime(anime.id, anime.episode)}
-                                            aria-label={`Delete ${titleText}`}
-                                            title="Delete anime"
-                                        >
-                                            x
-                                        </button>
-                                    )}
-                                </li>
-                            );
-                        })}
+                                </div>
+                                {onDeleteAnime && (
+                                    <button
+                                        className="delete-anime-btn"
+                                        onClick={() => onDeleteAnime(anime.id, anime.episode)}
+                                        aria-label={`Delete ${anime.title.romaji}`}
+                                        title="Delete anime"
+                                    >
+                                        x
+                                    </button>
+                                )}
+                            </li>
+                        ))}
                     </ul>
                 </div>
             ))}
