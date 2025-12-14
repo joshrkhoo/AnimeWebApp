@@ -46,25 +46,42 @@ const App = () => {
 
   // Add anime to the correct day in the schedule
   const handleSelectAnime = (anime) => {
+    let upcomingEpisodes = [];
+    
+    // First, try to get episodes from airingSchedule
     const edges = anime?.airingSchedule?.edges;
-    if (!edges) return;
+    if (edges && edges.length > 0) {
+      upcomingEpisodes = edges
+        .map((edge) => ({
+          // Keep all anime properties
+          ...anime,
 
-    const upcomingEpisodes = edges
-      .map((edge) => ({
-        // Keep all anime properties
-        ...anime,
-
-        // Keep epoch seconds, not date object
-        airing_time: edge.node.airingAt ?? null,
-        episode: edge.node.episode,
-        timeUntilAiring: edge.node.timeUntilAiring,
-      }))
-      // filter out episodes without airing_time or already aired
-      .filter(
-        (ep) => Number.isFinite(ep.airing_time) && ep.timeUntilAiring >= 0
-      )
-      // sort by airing_time
-      .sort(byAirTime);
+          // Keep epoch seconds, not date object
+          airing_time: edge.node.airingAt ?? null,
+          episode: edge.node.episode,
+          timeUntilAiring: edge.node.timeUntilAiring,
+        }))
+        // filter out episodes without airing_time or already aired
+        .filter(
+          (ep) => Number.isFinite(ep.airing_time) && ep.timeUntilAiring >= 0
+        )
+        // sort by airing_time
+        .sort(byAirTime);
+    }
+    
+    // If no episodes from airingSchedule, fall back to nextAiringEpisode
+    // This handles cases like One Piece where airingSchedule might be empty
+    if (upcomingEpisodes.length === 0 && anime?.nextAiringEpisode) {
+      const nextEp = anime.nextAiringEpisode;
+      if (nextEp.airingAt && nextEp.timeUntilAiring >= 0) {
+        upcomingEpisodes = [{
+          ...anime,
+          airing_time: nextEp.airingAt,
+          episode: nextEp.episode,
+          timeUntilAiring: nextEp.timeUntilAiring,
+        }];
+      }
+    }
 
     // Add the next upcoming episode to the schedule
     if (upcomingEpisodes.length > 0) {
@@ -139,8 +156,11 @@ const App = () => {
       return;
     }
     animeDataList.forEach((anime) => {
+      let upcomingEpisodes = [];
+      
+      // First, try to get episodes from airingSchedule
       if (anime && anime.airingSchedule && anime.airingSchedule.edges) {
-        const upcomingEpisodes = anime.airingSchedule.edges
+        upcomingEpisodes = anime.airingSchedule.edges
           .map((edge) => {
             return {
               ...anime,
@@ -153,11 +173,26 @@ const App = () => {
           })
           .filter((ep) => ep.airing_time && ep.timeUntilAiring >= 0)
           .sort((a, b) => a.airing_time - b.airing_time);
-        if (upcomingEpisodes.length > 0) {
-          const nextEpisode = upcomingEpisodes[0];
-          const airingDay = dayOfWeek(nextEpisode.airing_time);
-          updatedSchedule[airingDay].push(nextEpisode);
+      }
+      
+      // If no episodes from airingSchedule, fall back to nextAiringEpisode
+      // This handles cases like One Piece where airingSchedule might be empty
+      if (upcomingEpisodes.length === 0 && anime?.nextAiringEpisode) {
+        const nextEp = anime.nextAiringEpisode;
+        if (nextEp.airingAt && nextEp.timeUntilAiring >= 0) {
+          upcomingEpisodes = [{
+            ...anime,
+            airing_time: new Date(nextEp.airingAt * 1000),
+            episode: nextEp.episode,
+            timeUntilAiring: nextEp.timeUntilAiring,
+          }];
         }
+      }
+      
+      if (upcomingEpisodes.length > 0) {
+        const nextEpisode = upcomingEpisodes[0];
+        const airingDay = dayOfWeek(nextEpisode.airing_time);
+        updatedSchedule[airingDay].push(nextEpisode);
       }
     });
     setSchedule(updatedSchedule);

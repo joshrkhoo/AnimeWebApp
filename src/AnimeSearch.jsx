@@ -54,9 +54,18 @@ const AnimeSearch = ({onSelectAnime}) => {
     */
 
     let hasFutureEpisode = false;
+    
+    // Check airingSchedule edges first
     if (anime.airingSchedule && anime.airingSchedule.edges && anime.airingSchedule.edges.length > 0) {
       hasFutureEpisode = anime.airingSchedule.edges.some(edge => edge.node.timeUntilAiring >= 0);
     }
+    
+    // If no future episode found in airingSchedule, check nextAiringEpisode as fallback
+    // This is important for long-running shows where airingSchedule might be empty
+    if (!hasFutureEpisode && anime.nextAiringEpisode) {
+      hasFutureEpisode = anime.nextAiringEpisode.timeUntilAiring >= 0;
+    }
+    
     if (!hasFutureEpisode) {
       setNotification('This anime has already aired / Has no airring date');
       return;
@@ -73,6 +82,7 @@ const AnimeSearch = ({onSelectAnime}) => {
 
   return (
     <div className="search-container">
+        {notification && <div className="notification-message">{notification}</div>}
         <form onSubmit={(e) => e.preventDefault()} className="search-form-row">
             <input
                 type="text"
@@ -81,7 +91,6 @@ const AnimeSearch = ({onSelectAnime}) => {
                 onChange={handleInputChange}
                 className="search-input"
             />
-            {notification && <div className="notification-message">{notification}</div>}
             {error && <p style={{ color: 'red' }}>{error}</p>}
             {animeData && animeData.length > 0 && (
                 <ul className="search-dropdown">
