@@ -146,3 +146,34 @@ input[type="text"] {
     border-radius: 4px;
     flex-shrink: 0;
 }
+
+.anime-schedule-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.delete-anime-btn {
+    background: none;
+    color: #666;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.2s ease;
+    padding: 0;
+    margin-left: auto;
+    width: auto;
+    height: auto;
+}
+
+.delete-anime-btn:hover {
+    color: #ff4444;
+}
+
+.delete-anime-btn:active {
+    color: #cc0000;
+}
