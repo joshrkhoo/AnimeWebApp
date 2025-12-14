@@ -88,35 +88,84 @@ const App = () => {
     if (upcomingEpisodes.length > 0) {
       // get the next episode
       const nextEpisode = upcomingEpisodes[0];
-      // determine the day of the week it airs on
-      const airingDay = dayOfWeek(nextEpisode.airing_time);
+      
+      // Check if anime already exists in the database
+      const checkAndAddAnime = async () => {
+        try {
+          const response = await fetch(`${API_URL}/checkAnimeExists/${nextEpisode.id}`);
+          const data = await response.json();
+          
+          if (data.exists) {
+            console.log(`Anime ${nextEpisode.id} already exists in database, skipping add`);
+            return; // Don't add if already in database
+          }
+          
+          // Check if already in schedule state (across all days)
+          setSchedule((prevSchedule) => {
+            // Check all days for duplicates
+            const isDuplicate = Object.values(prevSchedule).some(dayList =>
+              dayList.some(a => a.id === nextEpisode.id)
+            );
+            
+            if (isDuplicate) {
+              console.log(`Anime ${nextEpisode.id} already in schedule, skipping add`);
+              return prevSchedule; // Don't modify if duplicate
+            }
+            
+            // determine the day of the week it airs on
+            const airingDay = dayOfWeek(nextEpisode.airing_time);
+            
+            // Get existing animes for that day or initialize empty array
+            const updatedDay = prevSchedule[airingDay]
+              ? [...prevSchedule[airingDay]]
+              : [];
 
-      // Update the schedule state
-      setSchedule((prevSchedule) => {
-        // Get existing animes for that day or initialize empty array
-        const updatedDay = prevSchedule[airingDay]
-          ? [...prevSchedule[airingDay]]
-          : [];
+            updatedDay.push(nextEpisode);
+            updatedDay.sort((a, b) => {
+              // Handle both Date objects and numbers for sorting
+              const timeA = a.airing_time instanceof Date ? a.airing_time.getTime() : a.airing_time;
+              const timeB = b.airing_time instanceof Date ? b.airing_time.getTime() : b.airing_time;
+              return timeA - timeB;
+            });
+            
+            return {
+              ...prevSchedule,
+              [airingDay]: updatedDay,
+            };
+          });
+        } catch (err) {
+          console.error('Error checking if anime exists:', err);
+          // If check fails, still try to add (fail gracefully)
+          setSchedule((prevSchedule) => {
+            const isDuplicate = Object.values(prevSchedule).some(dayList =>
+              dayList.some(a => a.id === nextEpisode.id)
+            );
+            
+            if (isDuplicate) {
+              return prevSchedule;
+            }
+            
+            const airingDay = dayOfWeek(nextEpisode.airing_time);
+            const updatedDay = prevSchedule[airingDay]
+              ? [...prevSchedule[airingDay]]
+              : [];
 
-        // Prevent duplicates
-        if (
-          !updatedDay.some(
-            (a) => a.id === nextEpisode.id && a.episode === nextEpisode.episode
-          )
-        ) {
-          updatedDay.push(nextEpisode);
-          updatedDay.sort((a, b) => {
-            // Handle both Date objects and numbers for sorting
-            const timeA = a.airing_time instanceof Date ? a.airing_time.getTime() : a.airing_time;
-            const timeB = b.airing_time instanceof Date ? b.airing_time.getTime() : b.airing_time;
-            return timeA - timeB;
+            updatedDay.push(nextEpisode);
+            updatedDay.sort((a, b) => {
+              const timeA = a.airing_time instanceof Date ? a.airing_time.getTime() : a.airing_time;
+              const timeB = b.airing_time instanceof Date ? b.airing_time.getTime() : b.airing_time;
+              return timeA - timeB;
+            });
+            
+            return {
+              ...prevSchedule,
+              [airingDay]: updatedDay,
+            };
           });
         }
-        return {
-          ...prevSchedule,
-          [airingDay]: updatedDay,
-        };
-      });
+      };
+      
+      checkAndAddAnime();
     }
   };
 
