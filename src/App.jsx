@@ -112,9 +112,20 @@ const App = () => {
     const animeIds = [];
     Object.values(loadedSchedule).forEach((dayList) => {
       dayList.forEach((anime) => {
-        if (!animeIds.includes(anime.id)) animeIds.push(anime.id);
+        if (anime && anime.id && !animeIds.includes(anime.id)) {
+          animeIds.push(anime.id);
+        }
       });
     });
+    
+    // If no anime IDs found, just set empty schedule and mark as loaded
+    if (animeIds.length === 0) {
+      console.log('No anime in schedule, setting empty schedule');
+      setSchedule(updatedSchedule);
+      setHasLoaded(true);
+      return;
+    }
+    
     // Fetch latest data for all anime in one batch
     const animeDataList = await fetchAnimeByIds(animeIds);
     if (!Array.isArray(animeDataList)) {
@@ -122,6 +133,9 @@ const App = () => {
         "Expected array from /fetchAnimeByIds, got:",
         animeDataList
       );
+      // Still set the schedule even if fetch fails
+      setSchedule(updatedSchedule);
+      setHasLoaded(true);
       return;
     }
     animeDataList.forEach((anime) => {
@@ -155,6 +169,59 @@ const App = () => {
     setSchedule(newSchedule);
   };
 
+  // Handler to delete an anime from the schedule
+  const handleDeleteAnime = async (animeId, episode) => {
+    try {
+      // Ensure animeId is a number (the API expects an integer)
+      // Handle various cases: string, number, or string with colon (e.g., "153800:1")
+      let id;
+      if (typeof animeId === 'string') {
+        // If it contains a colon, extract the part before it
+        const idPart = animeId.split(':')[0];
+        id = parseInt(idPart, 10);
+      } else {
+        id = Number(animeId);
+      }
+      
+      if (isNaN(id) || id <= 0) {
+        console.error('Invalid anime ID:', animeId, 'episode:', episode, 'parsed ID:', id);
+        return;
+      }
+
+      console.log(`Deleting anime with ID: ${id} (original: ${animeId}, episode: ${episode})`);
+      
+      // Call the delete API (removes all episodes for this anime ID)
+      const url = `${API_URL}/removeAnime/${id}`;
+      console.log('DELETE request to:', url);
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Remove all episodes of this anime from the UI state
+        // (API deletes all episodes, so we remove all from UI too)
+        setSchedule((prevSchedule) => {
+          const updatedSchedule = { ...prevSchedule };
+          // Find and remove all episodes of this anime from all days
+          Object.keys(updatedSchedule).forEach((day) => {
+            updatedSchedule[day] = updatedSchedule[day].filter(
+              (anime) => anime.id !== id
+            );
+          });
+          return updatedSchedule;
+        });
+        console.log(`Anime ${id} deleted successfully`, data);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Failed to delete anime:', response.status, errorData);
+      }
+    } catch (err) {
+      console.error('An error occurred while deleting the anime:', err);
+    }
+  };
+
   return (
     <div className="main-content">
       <AnimeProvider>
@@ -163,6 +230,7 @@ const App = () => {
           schedule={schedule}
           onScheduleLoaded={handleScheduleLoaded}
           onScheduleChange={handleScheduleChange}
+          onDeleteAnime={handleDeleteAnime}
           hasLoaded={hasLoaded}
         />
       </AnimeProvider>
