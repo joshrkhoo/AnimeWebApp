@@ -4,7 +4,7 @@ import { API_URL } from './config';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoaded }) => {
+const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDeleteAnime, hasLoaded }) => {
 
     const parseScheduleDates = (schedule) => {
         /*
@@ -40,13 +40,43 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoade
 
     const saveSchedule = async (newSchedule) => {
         try {
-            await fetch(`${API_URL}/saveSchedule`, {
+            // Convert Date objects to epoch seconds (numbers) before sending
+            const scheduleToSave = {};
+            for (const day in newSchedule) {
+                scheduleToSave[day] = newSchedule[day].map(anime => {
+                    const animeCopy = { ...anime };
+                    // Convert airing_time from Date object to epoch seconds if needed
+                    if (animeCopy.airing_time instanceof Date) {
+                        animeCopy.airing_time = Math.floor(animeCopy.airing_time.getTime() / 1000);
+                    } else if (typeof animeCopy.airing_time === 'string') {
+                        // If it's already a string (ISO format), convert to epoch
+                        animeCopy.airing_time = Math.floor(new Date(animeCopy.airing_time).getTime() / 1000);
+                    }
+                    // Ensure airing_time is a number
+                    if (typeof animeCopy.airing_time === 'number') {
+                        animeCopy.airing_time = Math.floor(animeCopy.airing_time);
+                    }
+                    return animeCopy;
+                });
+            }
+            
+            console.log('Saving schedule:', scheduleToSave);
+            
+            const response = await fetch(`${API_URL}/saveSchedule`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(newSchedule),
+                body: JSON.stringify(scheduleToSave),
             });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Schedule saved successfully:', result);
+            } else {
+                const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+                console.error('Failed to save schedule:', response.status, error);
+            }
         } catch (err) {
             console.error('An error occurred while saving the schedule:', err);
         }
@@ -87,6 +117,16 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, hasLoade
                                             : 'Aired'}
                                     </div>
                                 </div>
+                                {onDeleteAnime && (
+                                    <button
+                                        className="delete-anime-btn"
+                                        onClick={() => onDeleteAnime(anime.id, anime.episode)}
+                                        aria-label={`Delete ${anime.title.romaji}`}
+                                        title="Delete anime"
+                                    >
+                                        x
+                                    </button>
+                                )}
                             </li>
                         ))}
                     </ul>
