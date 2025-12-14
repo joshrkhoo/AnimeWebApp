@@ -11,6 +11,8 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDelete
         Parse schedule to ensure dates are Date objects
         
         We need to convert the dates from strings to Date objects so we can sort them otherwise they will be sorted as strings which will cause an error
+        
+        Backend returns airing_time as Unix timestamp in SECONDS, but JavaScript Date expects MILLISECONDS
         */
 
         const newSchedule = {};
@@ -18,7 +20,10 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDelete
         for (const day in schedule) {
             newSchedule[day] = schedule[day].map(anime => ({
                 ...anime,
-                airing_time: new Date(anime.airing_time)
+                // Convert seconds to milliseconds by multiplying by 1000
+                airing_time: typeof anime.airing_time === 'number' 
+                    ? new Date(anime.airing_time * 1000) 
+                    : new Date(anime.airing_time)
             }));
         }
         return newSchedule;
@@ -113,7 +118,15 @@ const AnimeScheduler = ({ schedule, onScheduleLoaded, onScheduleChange, onDelete
                                     <div className="anime-title">{anime.title.romaji}</div>
                                     <div className="anime-date">
                                         {anime.airing_time
-                                            ? `${new Date(anime.airing_time).toLocaleDateString()}, ${new Date(anime.airing_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`
+                                            ? (() => {
+                                                // Handle both Date objects and Unix timestamps (seconds)
+                                                const date = anime.airing_time instanceof Date
+                                                    ? anime.airing_time
+                                                    : typeof anime.airing_time === 'number'
+                                                        ? new Date(anime.airing_time * 1000) // Convert seconds to milliseconds
+                                                        : new Date(anime.airing_time);
+                                                return `${date.toLocaleDateString()}, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}`;
+                                            })()
                                             : 'Aired'}
                                     </div>
                                 </div>
