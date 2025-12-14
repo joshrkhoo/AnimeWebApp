@@ -14,7 +14,7 @@ const AnimeSearch = ({onSelectAnime}) => {
   // Hide notification after 0.7 seconds
   useEffect(() => {
     if (notification) {
-      const timer = setTimeout(() => setNotification(''), 700);
+      const timer = setTimeout(() => setNotification(''), 5000);
       return () => clearTimeout(timer);
     }
   }, [notification]);
