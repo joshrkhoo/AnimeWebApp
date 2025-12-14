@@ -3,9 +3,7 @@ import AnimeSearch from "./AnimeSearch";
 import { AnimeProvider } from "./AnimeContext";
 import "./AnimeStyle/App.css";
 import AnimeScheduler from "./AnimeScheduler";
-
-const apiUrl = "https://animewebappapi.onrender.com";
-const apiUrlLocal = "http://127.0.0.1:5000";
+import { API_URL } from "./config";
 
 const WEEKDAYS = [
   "Monday",
@@ -32,7 +30,7 @@ const byAirTime = (a, b) => a.airing_time - b.airing_time;
 
 // Helper: fetch anime details by multiple IDs from backend proxy
 async function fetchAnimeByIds(ids) {
-  const response = await fetch(`${apiUrlLocal}/fetchAnimeByIds`, {
+  const response = await fetch(`${API_URL}/fetchAnimeByIds`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids }),
