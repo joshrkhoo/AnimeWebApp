@@ -1,336 +1,310 @@
-import React, { useState } from "react";
-import AnimeSearch from "./AnimeSearch";
-import { AnimeProvider } from "./AnimeContext";
-import "./AnimeStyle/App.css";
-import AnimeScheduler from "./AnimeScheduler";
-import { API_URL } from "./config";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AuthScreen from './AuthScreen';
+import { BrowseView, WishlistView } from './Posters';
+import SearchBar from './SearchBar';
+import { UpNext, WeekView } from './Schedule';
+import { api, loadSession, saveSession, setUnauthorizedHandler } from './api';
+import { BookmarkIcon, CalendarIcon, LogoutIcon, TvIcon } from './Icons';
+import { airingDate, formatDay, formatTime, isUpcoming, premiereLabel, showTitle } from './time';
 
-const WEEKDAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
+const REFRESH_MS = 10 * 60 * 1000;
+const CLOCK_TICK_MS = 30 * 1000;
+const TOAST_MS = 4500;
+const EMPTY_LIBRARY = { schedule: [], wishlist: [] };
 
-const TZ = "Australia/Melbourne";
-
-// Helpers
-const emptySchedule = () =>
-  WEEKDAYS.reduce((acc, d) => ((acc[d] = []), acc), {});
-
-const dayOfWeek = (secs, timeZone = TZ) =>
-  new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone }).format(
-    new Date(secs * 1000)
-  );
-
-const byAirTime = (a, b) => a.airing_time - b.airing_time;
-
-// Helper: fetch anime details by multiple IDs from backend proxy
-async function fetchAnimeByIds(ids) {
-  const response = await fetch(`${API_URL}/fetchAnimeByIds`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ids }),
-  });
-  const data = await response.json();
-  return data;
+function useNow() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), CLOCK_TICK_MS);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
 }
 
-const App = () => {
-  // Track if the schedule has been loaded from the backend
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [schedule, setSchedule] = useState(emptySchedule());
+// toast: { title, detail?, image?, kind?, action?: { label, onClick } }
+function useToast() {
+  const [toast, setToast] = useState(null);
+  const timer = useRef();
+  const dismiss = useCallback(() => {
+    clearTimeout(timer.current);
+    setToast(null);
+  }, []);
+  const show = useCallback((next) => {
+    clearTimeout(timer.current);
+    setToast({ kind: 'info', ...next, id: Date.now() });
+    timer.current = setTimeout(() => setToast(null), TOAST_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return [toast, show, dismiss];
+}
 
-  // Add anime to the correct day in the schedule
-  const handleSelectAnime = (anime) => {
-    let upcomingEpisodes = [];
-    
-    // First, try to get episodes from airingSchedule
-    const edges = anime?.airingSchedule?.edges;
-    if (edges && edges.length > 0) {
-      upcomingEpisodes = edges
-        .map((edge) => ({
-          // Keep all anime properties
-          ...anime,
+const Toast = ({ toast, onDismiss }) => (
+  <div key={toast.id} className={`toast toast-${toast.kind}`} role="status">
+    {toast.image && <img src={toast.image} alt="" />}
+    <div className="toast-text">
+      <strong>{toast.title}</strong>
+      {toast.detail && <span>{toast.detail}</span>}
+    </div>
+    {toast.action && (
+      <button
+        className="toast-action"
+        onClick={() => {
+          toast.action.onClick();
+          onDismiss();
+        }}
+      >
+        {toast.action.label}
+      </button>
+    )}
+  </div>
+);
 
-          // Convert to Date object for consistency (airingAt is in seconds)
-          airing_time: edge.node.airingAt ? new Date(edge.node.airingAt * 1000) : null,
-          episode: edge.node.episode,
-          timeUntilAiring: edge.node.timeUntilAiring,
-        }))
-        // filter out episodes without airing_time or already aired
-        .filter(
-          (ep) => ep.airing_time && ep.timeUntilAiring >= 0
-        )
-        // sort by airing_time
-        .sort((a, b) => a.airing_time - b.airing_time);
-    }
-    
-    // If no episodes from airingSchedule, fall back to nextAiringEpisode
-    // This handles cases like One Piece where airingSchedule might be empty
-    if (upcomingEpisodes.length === 0 && anime?.nextAiringEpisode) {
-      const nextEp = anime.nextAiringEpisode;
-      if (nextEp.airingAt && nextEp.timeUntilAiring >= 0) {
-        upcomingEpisodes = [{
-          ...anime,
-          // Convert to Date object for consistency (airingAt is in seconds)
-          airing_time: new Date(nextEp.airingAt * 1000),
-          episode: nextEp.episode,
-          timeUntilAiring: nextEp.timeUntilAiring,
-        }];
-      }
-    }
+function addedDetail(show, list) {
+  if (list === 'wishlist') return `${premiereLabel(show)} · joins your schedule when it airs`;
+  const date = airingDate(show);
+  if (!date) return 'Next episode date TBA';
+  return `Ep ${show.nextAiringEpisode.episode} · ${formatDay(date)}, ${formatTime(date)}`;
+}
 
-    // Add the next upcoming episode to the schedule
-    if (upcomingEpisodes.length > 0) {
-      // get the next episode
-      const nextEpisode = upcomingEpisodes[0];
-      
-      // Check if anime already exists in the database
-      const checkAndAddAnime = async () => {
-        try {
-          const response = await fetch(`${API_URL}/checkAnimeExists/${nextEpisode.id}`);
-          const data = await response.json();
-          
-          if (data.exists) {
-            console.log(`Anime ${nextEpisode.id} already exists in database, skipping add`);
-            return; // Don't add if already in database
-          }
-          
-          // Check if already in schedule state (across all days)
-          setSchedule((prevSchedule) => {
-            // Check all days for duplicates
-            const isDuplicate = Object.values(prevSchedule).some(dayList =>
-              dayList.some(a => a.id === nextEpisode.id)
-            );
-            
-            if (isDuplicate) {
-              console.log(`Anime ${nextEpisode.id} already in schedule, skipping add`);
-              return prevSchedule; // Don't modify if duplicate
-            }
-            
-            // determine the day of the week it airs on
-            const airingDay = dayOfWeek(nextEpisode.airing_time);
-            
-            // Get existing animes for that day or initialize empty array
-            const updatedDay = prevSchedule[airingDay]
-              ? [...prevSchedule[airingDay]]
-              : [];
+const without = (library, id) => ({
+  schedule: library.schedule.filter((s) => s.id !== id),
+  wishlist: library.wishlist.filter((s) => s.id !== id),
+});
 
-            updatedDay.push(nextEpisode);
-            updatedDay.sort((a, b) => {
-              // Handle both Date objects and numbers for sorting
-              const timeA = a.airing_time instanceof Date ? a.airing_time.getTime() : a.airing_time;
-              const timeB = b.airing_time instanceof Date ? b.airing_time.getTime() : b.airing_time;
-              return timeA - timeB;
-            });
-            
-            return {
-              ...prevSchedule,
-              [airingDay]: updatedDay,
-            };
+const Dashboard = ({ user, onLogout }) => {
+  const [view, setView] = useState('schedule');
+  const [browseTab, setBrowseTab] = useState('airing');
+  const [library, setLibrary] = useState(null);
+  const [libraryError, setLibraryError] = useState('');
+  const [browseLists, setBrowseLists] = useState({});
+  const [browseErrors, setBrowseErrors] = useState({});
+  const [toast, showToast, dismissToast] = useToast();
+  const pendingAdds = useRef(new Map());
+  const now = useNow();
+
+  const loadLibrary = useCallback(() => {
+    api
+      .library()
+      .then(({ schedule, wishlist, promoted }) => {
+        setLibrary({ schedule, wishlist });
+        setLibraryError('');
+        if (promoted.length === 1) {
+          showToast({
+            kind: 'success',
+            title: `${showTitle(promoted[0])} started airing`,
+            detail: 'Moved from your wishlist to your schedule',
+            image: promoted[0].coverImage.large,
           });
-        } catch (err) {
-          console.error('Error checking if anime exists:', err);
-          // If check fails, still try to add (fail gracefully)
-          setSchedule((prevSchedule) => {
-            const isDuplicate = Object.values(prevSchedule).some(dayList =>
-              dayList.some(a => a.id === nextEpisode.id)
-            );
-            
-            if (isDuplicate) {
-              return prevSchedule;
-            }
-            
-            const airingDay = dayOfWeek(nextEpisode.airing_time);
-            const updatedDay = prevSchedule[airingDay]
-              ? [...prevSchedule[airingDay]]
-              : [];
-
-            updatedDay.push(nextEpisode);
-            updatedDay.sort((a, b) => {
-              const timeA = a.airing_time instanceof Date ? a.airing_time.getTime() : a.airing_time;
-              const timeB = b.airing_time instanceof Date ? b.airing_time.getTime() : b.airing_time;
-              return timeA - timeB;
-            });
-            
-            return {
-              ...prevSchedule,
-              [airingDay]: updatedDay,
-            };
+        } else if (promoted.length > 1) {
+          showToast({
+            kind: 'success',
+            title: `${promoted.length} wishlist shows started airing`,
+            detail: 'They’ve been moved to your schedule',
           });
         }
-      };
-      
-      checkAndAddAnime();
-    }
-  };
+      })
+      .catch((err) => setLibraryError(err.message));
+  }, [showToast]);
 
-  // Handler to update schedule when loaded from backend
-  const handleScheduleLoaded = async (loadedSchedule) => {
-    // For each anime in the loaded schedule, fetch latest data and get the next episode
-    const updatedSchedule = {
-      Monday: [],
-      Tuesday: [],
-      Wednesday: [],
-      Thursday: [],
-      Friday: [],
-      Saturday: [],
-      Sunday: [],
+  const loadBrowse = useCallback((kind) => {
+    setBrowseErrors((prev) => ({ ...prev, [kind]: '' }));
+    api
+      .browse(kind)
+      .then((shows) => setBrowseLists((prev) => ({ ...prev, [kind]: shows })))
+      .catch((err) => setBrowseErrors((prev) => ({ ...prev, [kind]: err.message })));
+  }, []);
+
+  // Air times move every week, so refresh periodically and when the tab regains focus
+  useEffect(() => {
+    loadLibrary();
+    const timer = setInterval(loadLibrary, REFRESH_MS);
+    const onVisible = () => document.visibilityState === 'visible' && loadLibrary();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
-    const animeIds = [];
-    Object.values(loadedSchedule).forEach((dayList) => {
-      dayList.forEach((anime) => {
-        if (anime && anime.id && !animeIds.includes(anime.id)) {
-          animeIds.push(anime.id);
-        }
-      });
-    });
-    
-    // If no anime IDs found, just set empty schedule and mark as loaded
-    if (animeIds.length === 0) {
-      console.log('No anime in schedule, setting empty schedule');
-      setSchedule(updatedSchedule);
-      setHasLoaded(true);
-      return;
-    }
-    
-    // Fetch latest data for all anime in one batch
-    const animeDataList = await fetchAnimeByIds(animeIds);
-    if (!Array.isArray(animeDataList)) {
-      console.error(
-        "Expected array from /fetchAnimeByIds, got:",
-        animeDataList
-      );
-      // Still set the schedule even if fetch fails
-      setSchedule(updatedSchedule);
-      setHasLoaded(true);
-      return;
-    }
-    animeDataList.forEach((anime) => {
-      let upcomingEpisodes = [];
-      
-      // First, try to get episodes from airingSchedule
-      if (anime && anime.airingSchedule && anime.airingSchedule.edges) {
-        upcomingEpisodes = anime.airingSchedule.edges
-          .map((edge) => {
-            return {
-              ...anime,
-              airing_time: edge.node.airingAt
-                ? new Date(edge.node.airingAt * 1000)
-                : null,
-              episode: edge.node.episode,
-              timeUntilAiring: edge.node.timeUntilAiring,
-            };
-          })
-          .filter((ep) => ep.airing_time && ep.timeUntilAiring >= 0)
-          .sort((a, b) => a.airing_time - b.airing_time);
-      }
-      
-      // If no episodes from airingSchedule, fall back to nextAiringEpisode
-      // This handles cases like One Piece where airingSchedule might be empty
-      if (upcomingEpisodes.length === 0 && anime?.nextAiringEpisode) {
-        const nextEp = anime.nextAiringEpisode;
-        if (nextEp.airingAt && nextEp.timeUntilAiring >= 0) {
-          upcomingEpisodes = [{
-            ...anime,
-            airing_time: new Date(nextEp.airingAt * 1000),
-            episode: nextEp.episode,
-            timeUntilAiring: nextEp.timeUntilAiring,
-          }];
-        }
-      }
-      
-      if (upcomingEpisodes.length > 0) {
-        const nextEpisode = upcomingEpisodes[0];
-        // dayOfWeek expects seconds, so convert Date to seconds if needed
-        const airingTimeSeconds = nextEpisode.airing_time instanceof Date
-          ? Math.floor(nextEpisode.airing_time.getTime() / 1000)
-          : nextEpisode.airing_time;
-        const airingDay = dayOfWeek(airingTimeSeconds);
-        updatedSchedule[airingDay].push(nextEpisode);
-      }
-    });
-    setSchedule(updatedSchedule);
-    setHasLoaded(true);
-  };
+  }, [loadLibrary]);
 
-  // Handler to update schedule from AnimeScheduler
-  const handleScheduleChange = (newSchedule) => {
-    setSchedule(newSchedule);
-  };
+  useEffect(() => {
+    if (view === 'browse' && !browseLists[browseTab]) loadBrowse(browseTab);
+  }, [view, browseTab, browseLists, loadBrowse]);
 
-  // Handler to delete an anime from the schedule
-  const handleDeleteAnime = async (animeId, episode) => {
+  // show id -> 'schedule' | 'wishlist'
+  const listOf = useMemo(() => {
+    const map = new Map();
+    const lib = library || EMPTY_LIBRARY;
+    lib.schedule.forEach((s) => map.set(s.id, 'schedule'));
+    lib.wishlist.forEach((s) => map.set(s.id, 'wishlist'));
+    return map;
+  }, [library]);
+
+  const removeShow = async (show, { quiet = false } = {}) => {
+    setLibrary((prev) => without(prev || EMPTY_LIBRARY, show.id));
     try {
-      // Ensure animeId is a number (the API expects an integer)
-      // Handle various cases: string, number, or string with colon (e.g., "153800:1")
-      let id;
-      if (typeof animeId === 'string') {
-        // If it contains a colon, extract the part before it
-        const idPart = animeId.split(':')[0];
-        id = parseInt(idPart, 10);
-      } else {
-        id = Number(animeId);
-      }
-      
-      if (isNaN(id) || id <= 0) {
-        console.error('Invalid anime ID:', animeId, 'episode:', episode, 'parsed ID:', id);
-        return;
-      }
-
-      console.log(`Deleting anime with ID: ${id} (original: ${animeId}, episode: ${episode})`);
-      
-      // Call the delete API (removes all episodes for this anime ID)
-      const url = `${API_URL}/removeAnime/${id}`;
-      console.log('DELETE request to:', url);
-      
-      const response = await fetch(url, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Remove all episodes of this anime from the UI state
-        // (API deletes all episodes, so we remove all from UI too)
-        setSchedule((prevSchedule) => {
-          const updatedSchedule = { ...prevSchedule };
-          // Find and remove all episodes of this anime from all days
-          Object.keys(updatedSchedule).forEach((day) => {
-            updatedSchedule[day] = updatedSchedule[day].filter(
-              (anime) => anime.id !== id
-            );
-          });
-          return updatedSchedule;
-        });
-        console.log(`Anime ${id} deleted successfully`, data);
-      } else {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Failed to delete anime:', response.status, errorData);
-      }
+      // If the add is still in flight, let it land first so the delete isn't overtaken
+      await pendingAdds.current.get(show.id)?.catch(() => {});
+      await api.removeFromLibrary(show.id);
+      if (!quiet) showToast({ title: `Removed ${showTitle(show)}`, image: show.coverImage.large });
     } catch (err) {
-      console.error('An error occurred while deleting the anime:', err);
+      showToast({ kind: 'error', title: err.message });
+      loadLibrary();
     }
   };
+
+  // Optimistic: the show appears immediately; the server confirms in the background
+  const addShow = async (show) => {
+    if (listOf.has(show.id)) return;
+    const list = isUpcoming(show, new Date()) ? 'wishlist' : 'schedule';
+    setLibrary((prev) => {
+      const lib = prev || EMPTY_LIBRARY;
+      return { ...lib, [list]: [...lib[list], show] };
+    });
+    showToast({
+      kind: 'success',
+      title: list === 'wishlist' ? 'Added to your wishlist' : 'Added to your schedule',
+      detail: `${showTitle(show)} · ${addedDetail(show, list)}`,
+      image: show.coverImage.large,
+      action: { label: 'Undo', onClick: () => removeShow(show, { quiet: true }) },
+    });
+
+    const request = api.addToLibrary(show.id);
+    pendingAdds.current.set(show.id, request);
+    try {
+      const { show: saved, list: savedList } = await request;
+      setLibrary((prev) => {
+        const lib = prev || EMPTY_LIBRARY;
+        // Undone while saving: don't bring it back
+        if (![...lib.schedule, ...lib.wishlist].some((s) => s.id === show.id)) return lib;
+        const rest = without(lib, show.id);
+        return { ...rest, [savedList]: [...rest[savedList], saved] };
+      });
+    } catch (err) {
+      setLibrary((prev) => without(prev || EMPTY_LIBRARY, show.id));
+      showToast({ kind: 'error', title: `Couldn't add ${showTitle(show)}`, detail: err.message });
+    } finally {
+      pendingAdds.current.delete(show.id);
+    }
+  };
+
+  const browseUpcoming = () => {
+    setBrowseTab('upcoming');
+    setView('browse');
+  };
+
+  const counts = { schedule: library?.schedule.length, wishlist: library?.wishlist.length };
+  const navItems = [
+    { id: 'schedule', label: 'My schedule', icon: <CalendarIcon /> },
+    { id: 'wishlist', label: 'Wishlist', icon: <BookmarkIcon /> },
+    { id: 'browse', label: 'Browse', icon: <TvIcon /> },
+  ];
+  const gridProps = { now, listOf, onAdd: addShow, onRemove: removeShow };
 
   return (
-    <div className="main-content">
-      <AnimeProvider>
-        <h1 className="app-title">Anime Schedule</h1>
-        <AnimeSearch onSelectAnime={handleSelectAnime} />
-        <AnimeScheduler
-          schedule={schedule}
-          onScheduleLoaded={handleScheduleLoaded}
-          onScheduleChange={handleScheduleChange}
-          onDeleteAnime={handleDeleteAnime}
-          hasLoaded={hasLoaded}
-        />
-      </AnimeProvider>
+    <div className="layout">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-mark"><TvIcon /></span>
+          <span className="brand-name">Anime Schedule</span>
+        </div>
+        <nav className="nav">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={`nav-item ${view === item.id ? 'is-active' : ''}`}
+              onClick={() => setView(item.id)}
+              aria-current={view === item.id ? 'page' : undefined}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+              {counts[item.id] > 0 && (
+                <span key={counts[item.id]} className="nav-count pop">{counts[item.id]}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="user">
+          <span className="avatar" aria-hidden="true">{user.username[0].toUpperCase()}</span>
+          <span className="user-name">{user.username}</span>
+          <button className="icon-btn" onClick={onLogout} aria-label="Log out" title="Log out">
+            <LogoutIcon />
+          </button>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="topbar">
+          <SearchBar listOf={listOf} now={now} onAdd={addShow} />
+        </header>
+
+        {libraryError && view !== 'browse' && (
+          <div className="notice">
+            {libraryError} <button className="link" onClick={loadLibrary}>Try again</button>
+          </div>
+        )}
+        {!library && !libraryError && view !== 'browse' && <p className="muted">Loading your shows…</p>}
+
+        {view === 'schedule' && library && (
+          <>
+            <UpNext shows={library.schedule} now={now} onBrowse={() => setView('browse')} />
+            {library.schedule.length > 0 && (
+              <WeekView shows={library.schedule} now={now} onRemove={removeShow} />
+            )}
+          </>
+        )}
+
+        {view === 'wishlist' && library && (
+          <WishlistView shows={library.wishlist} onBrowseUpcoming={browseUpcoming} {...gridProps} />
+        )}
+
+        {view === 'browse' && (
+          <BrowseView
+            tab={browseTab}
+            onTab={setBrowseTab}
+            lists={browseLists}
+            errors={browseErrors}
+            onRetry={loadBrowse}
+            {...gridProps}
+          />
+        )}
+      </main>
+
+      {toast && <Toast toast={toast} onDismiss={dismissToast} />}
     </div>
   );
+};
+
+const App = () => {
+  const [session, setSession] = useState(loadSession);
+
+  const signOut = useCallback(() => {
+    saveSession(null);
+    setSession(null);
+  }, []);
+
+  // Any 401 from the API means the session expired or was revoked
+  useEffect(() => {
+    setUnauthorizedHandler(signOut);
+  }, [signOut]);
+
+  // Confirm a stored session is still valid
+  useEffect(() => {
+    if (session) api.me().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleAuthenticated = (newSession) => {
+    saveSession(newSession);
+    setSession(newSession);
+  };
+
+  const handleLogout = async () => {
+    await api.logout().catch(() => {});
+    signOut();
+  };
+
+  if (!session) return <AuthScreen onAuthenticated={handleAuthenticated} />;
+  return <Dashboard key={session.user.id} user={session.user} onLogout={handleLogout} />;
 };
 
 export default App;
