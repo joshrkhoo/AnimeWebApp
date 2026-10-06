@@ -37,6 +37,9 @@ export const TvIcon = (p) => (
 export const LogoutIcon = (p) => (
   <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></Icon>
 );
+export const PlayIcon = (p) => (
+  <Icon {...p}><path d="M7 4v16l13-8z" /></Icon>
+);
 export const BookmarkIcon = ({ filled, ...p }) => (
   <Icon {...p}><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill={filled ? 'currentColor' : 'none'} /></Icon>
 );

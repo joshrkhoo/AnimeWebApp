@@ -16,10 +16,10 @@ const SAVED = {
 };
 
 /**
- * Poster cards. Clicking a poster adds it; the corner button adds or removes.
+ * Poster cards. Clicking a poster opens its details; the corner button adds or removes.
  * `listOf` maps show id -> 'schedule' | 'wishlist' for saved shows.
  */
-export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove }) => (
+export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove, onOpen }) => (
   <ul className="poster-grid">
     {shows.map((show) => {
       const list = listOf.get(show.id);
@@ -29,13 +29,7 @@ export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove }) => (
       return (
         <li key={show.id} className={`poster ${list ? `is-saved is-${list}` : ''}`}>
           <div className="poster-img" style={{ '--poster-color': show.coverImage.color || '#222' }}>
-            {/* Mouse/touch shortcut; keyboard users use the corner button */}
-            <button
-              className="poster-cover"
-              onClick={() => !list && onAdd(show)}
-              tabIndex={-1}
-              aria-hidden="true"
-            >
+            <button className="poster-cover" onClick={() => onOpen(show)} aria-label={`Details for ${title}`}>
               <img src={show.coverImage.extraLarge} alt="" loading="lazy" />
             </button>
             {list && (
@@ -54,7 +48,7 @@ export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove }) => (
               </span>
             </button>
           </div>
-          <span className="poster-title">{title}</span>
+          <button className="poster-title" onClick={() => onOpen(show)} tabIndex={-1}>{title}</button>
           <span className="small muted">{caption(show, now)}</span>
         </li>
       );

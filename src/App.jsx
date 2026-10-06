@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AuthScreen from './AuthScreen';
+import Details from './Details';
 import { BrowseView, WishlistView } from './Posters';
 import SearchBar from './SearchBar';
 import { UpNext, WeekView } from './Schedule';
@@ -79,6 +80,8 @@ const Dashboard = ({ user, onLogout }) => {
   const [browseLists, setBrowseLists] = useState({});
   const [browseErrors, setBrowseErrors] = useState({});
   const [toast, showToast, dismissToast] = useToast();
+  const [detailsShow, setDetailsShow] = useState(null);
+  const closeDetails = useCallback(() => setDetailsShow(null), []);
   const pendingAdds = useRef(new Map());
   const now = useNow();
 
@@ -198,7 +201,7 @@ const Dashboard = ({ user, onLogout }) => {
     { id: 'wishlist', label: 'Wishlist', icon: <BookmarkIcon /> },
     { id: 'browse', label: 'Browse', icon: <TvIcon /> },
   ];
-  const gridProps = { now, listOf, onAdd: addShow, onRemove: removeShow };
+  const gridProps = { now, listOf, onAdd: addShow, onRemove: removeShow, onOpen: setDetailsShow };
 
   return (
     <div className="layout">
@@ -234,7 +237,7 @@ const Dashboard = ({ user, onLogout }) => {
 
       <main className="main">
         <header className="topbar">
-          <SearchBar listOf={listOf} now={now} onAdd={addShow} />
+          <SearchBar listOf={listOf} now={now} onAdd={addShow} onOpen={setDetailsShow} />
         </header>
 
         {libraryError && view !== 'browse' && (
@@ -246,9 +249,9 @@ const Dashboard = ({ user, onLogout }) => {
 
         {view === 'schedule' && library && (
           <>
-            <UpNext shows={library.schedule} now={now} onBrowse={() => setView('browse')} />
+            <UpNext shows={library.schedule} now={now} onBrowse={() => setView('browse')} onOpen={setDetailsShow} />
             {library.schedule.length > 0 && (
-              <WeekView shows={library.schedule} now={now} onRemove={removeShow} />
+              <WeekView shows={library.schedule} now={now} onRemove={removeShow} onOpen={setDetailsShow} />
             )}
           </>
         )}
@@ -268,6 +271,17 @@ const Dashboard = ({ user, onLogout }) => {
           />
         )}
       </main>
+
+      {detailsShow && (
+        <Details
+          preview={detailsShow}
+          list={listOf.get(detailsShow.id)}
+          now={now}
+          onAdd={addShow}
+          onRemove={removeShow}
+          onClose={closeDetails}
+        />
+      )}
 
       {toast && <Toast toast={toast} onDismiss={dismissToast} />}
     </div>

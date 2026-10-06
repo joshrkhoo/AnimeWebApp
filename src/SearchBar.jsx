@@ -32,7 +32,7 @@ function AddButton({ list, upcoming, onClick }) {
   );
 }
 
-const SearchBar = ({ listOf, now, onAdd }) => {
+const SearchBar = ({ listOf, now, onAdd, onOpen }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -144,11 +144,20 @@ const SearchBar = ({ listOf, now, onAdd }) => {
                 const list = listOf.get(show.id);
                 return (
                   <li key={show.id} className="search-result">
-                    <img src={show.coverImage.large} alt="" loading="lazy" />
-                    <div className="search-result-text">
-                      <span className="search-result-title">{showTitle(show)}</span>
-                      <span className="muted small">{nextEpisodeLabel(show)}</span>
-                    </div>
+                    <button
+                      type="button"
+                      className="search-result-open"
+                      onClick={() => {
+                        setOpen(false);
+                        onOpen(show);
+                      }}
+                    >
+                      <img src={show.coverImage.large} alt="" loading="lazy" />
+                      <span className="search-result-text">
+                        <span className="search-result-title">{showTitle(show)}</span>
+                        <span className="muted small">{nextEpisodeLabel(show)}</span>
+                      </span>
+                    </button>
                     <AddButton list={list} upcoming={isUpcoming(show, now)} onClick={() => handleAdd(show)} />
                   </li>
                 );

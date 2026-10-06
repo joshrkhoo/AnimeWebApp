@@ -73,6 +73,7 @@ export const api = {
 
   search: (text, signal) => request(`/search?q=${encodeURIComponent(text)}`, { signal }),
   browse: (kind) => request(`/browse/${kind}`),
+  details: (id) => request(`/anime/${id}`),
 
   // Returns { schedule: [...], wishlist: [...], promoted: [...] }
   library: () => request('/library'),

@@ -3,7 +3,7 @@ import { CloseIcon, TvIcon } from './Icons';
 import { airingDate, buildWeek, countdown, formatDay, formatTime, showTitle } from './time';
 
 // Big banner for the soonest upcoming episode
-export const UpNext = ({ shows, now, onBrowse }) => {
+export const UpNext = ({ shows, now, onBrowse, onOpen }) => {
   const next = shows
     .filter((s) => s.nextAiringEpisode && airingDate(s) > now)
     .sort((a, b) => a.nextAiringEpisode.airingAt - b.nextAiringEpisode.airingAt)[0];
@@ -39,21 +39,26 @@ export const UpNext = ({ shows, now, onBrowse }) => {
             <span key={g} className="pill">{g}</span>
           ))}
         </div>
+        <button className="btn btn-secondary hero-btn" onClick={() => onOpen(next)}>
+          Details & where to watch
+        </button>
       </div>
     </section>
   );
 };
 
-const ShowCard = ({ show, now, onRemove, showDate }) => {
+const ShowCard = ({ show, now, onRemove, onOpen, showDate }) => {
   const date = airingDate(show);
   const remaining = date && countdown(date, now);
   return (
     <li className="show-card">
-      <img src={show.coverImage.large} alt="" loading="lazy" />
+      <button className="show-card-open" onClick={() => onOpen(show)} aria-label={`Details for ${showTitle(show)}`}>
+        <img src={show.coverImage.large} alt="" loading="lazy" />
+      </button>
       <div className="show-card-text">
-        <a className="show-card-title" href={show.siteUrl} target="_blank" rel="noreferrer">
+        <button className="show-card-title" onClick={() => onOpen(show)}>
           {showTitle(show)}
-        </a>
+        </button>
         {date ? (
           <>
             <span className="small">
@@ -79,7 +84,7 @@ const ShowCard = ({ show, now, onRemove, showDate }) => {
   );
 };
 
-export const WeekView = ({ shows, now, onRemove }) => {
+export const WeekView = ({ shows, now, onRemove, onOpen }) => {
   const { days, later, tba } = buildWeek(shows, now);
   const extra = [...later, ...tba];
 
@@ -99,7 +104,7 @@ export const WeekView = ({ shows, now, onRemove }) => {
             {day.shows.length ? (
               <ul>
                 {day.shows.map((show) => (
-                  <ShowCard key={show.id} show={show} now={now} onRemove={onRemove} />
+                  <ShowCard key={show.id} show={show} now={now} onRemove={onRemove} onOpen={onOpen} />
                 ))}
               </ul>
             ) : (
@@ -117,7 +122,7 @@ export const WeekView = ({ shows, now, onRemove }) => {
           </div>
           <ul className="later">
             {extra.map((show) => (
-              <ShowCard key={show.id} show={show} now={now} onRemove={onRemove} showDate />
+              <ShowCard key={show.id} show={show} now={now} onRemove={onRemove} onOpen={onOpen} showDate />
             ))}
           </ul>
         </>
