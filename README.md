@@ -1,23 +1,63 @@
 # AnimeWebApp
 
-A weekly schedule for the anime you're watching. Add shows that are airing and see when each next episode drops, in your own timezone. Wishlist upcoming shows and they join your schedule automatically once they start airing.
+A weekly schedule for the anime you're watching. Add shows that are airing and see when each next episode drops, in your own timezone. Open any show to see where it's streaming. Wishlist upcoming shows and they join your schedule automatically once they start airing.
 
 **Live:** https://anime.joshrkhoo.com · **API:** [AnimeWebAppApi](https://github.com/joshrkhoo/AnimeWebAppApi)
 
+![Searching for a show, adding it, and opening its details](docs/demo.gif)
+
 ## Features
 
-- **Accounts.** Sign up with a username and password; each user has their own schedule.
-- **My schedule.** An "Up next" banner with a countdown, then the 7 days starting today. Shows whose next episode is more than a week away (or not announced) appear under "Coming later".
-- **Wishlist.** Shows that haven't premiered go here and move to the schedule when they start airing (or premiere within a week).
+- **Accounts.** Sign up with a username and password; each user has their own schedule and wishlist.
+- **My schedule.** An "Up next" banner with a live countdown, then the 7 days starting today. Shows whose next episode is more than a week away (or not announced) appear under "Coming later".
+- **Show details.** Click any show (poster, schedule card, search result or the Up next banner) to see where it's streaming, its next episode or premiere date, synopsis, genres, studio, episode count, score and a trailer link.
+- **Wishlist.** Shows that haven't premiered go here and move to your schedule when they start airing (or premiere within a week), with a notification when they do.
 - **Browse.** The season's most popular shows, as *Airing now* and *Upcoming* tabs.
-- **Search.** Only matches shows that are airing or upcoming.
+- **Search.** Matches only shows that are airing or upcoming. The dropdown closes when you click outside it, press Esc or add a show, and has a clear button.
 - **Instant feedback.** Adding a show updates the UI immediately while it saves in the background, with a toast that shows when it airs and an Undo button.
+- **Works on phones.** The sidebar becomes a tab bar, days stack vertically and the details panel goes full screen.
 
-Show data (titles, posters, air times) comes from [AniList](https://anilist.co) through the API.
+Show data (titles, posters, air times, streaming links) comes from [AniList](https://anilist.co) through the API.
+
+## Screenshots
+
+### Schedule
+
+![Weekly schedule with the Up next banner](docs/screenshots/schedule.jpg)
+
+### Show details and where to watch
+
+![Details panel with streaming links, synopsis and info](docs/screenshots/details.jpg)
+
+### Search
+
+![Search dropdown with an Add button](docs/screenshots/search.jpg)
+
+### Browse
+
+Saved shows are outlined and badged: green for your schedule, coral for your wishlist.
+
+![Browse page showing popular airing shows](docs/screenshots/browse.jpg)
+
+### Wishlist
+
+![Wishlist of upcoming shows with premiere dates](docs/screenshots/wishlist.jpg)
+
+### Mobile
+
+<p>
+  <img src="docs/screenshots/mobile-schedule.jpg" alt="Schedule on a phone" width="300" />
+  &nbsp;
+  <img src="docs/screenshots/mobile-details.jpg" alt="Show details on a phone" width="300" />
+</p>
+
+### Log in
+
+![Login screen](docs/screenshots/login.jpg)
 
 ## Tech stack
 
-React 18 (Create React App), plain CSS, no other runtime dependencies.
+React 18 (Create React App) and plain CSS, with no other runtime dependencies.
 
 ## Project structure
 
@@ -28,11 +68,21 @@ src/
   SearchBar.jsx   Search with results dropdown
   Schedule.jsx    "Up next" banner and the weekly schedule
   Posters.jsx     Poster grid, Browse page and Wishlist page
+  Details.jsx     Show details panel (streaming links, synopsis, info)
   api.js          API client and session storage
   time.js         Date formatting, week grouping, wishlist rule
   Icons.jsx       Inline SVG icons
   styles.css      All styles
+docs/             README screenshots and demo GIF
 ```
+
+## How it works
+
+- **Sessions.** Logging in returns a token that's kept in `localStorage` and sent as `Authorization: Bearer <token>`. Any `401` from the API signs you out. Logging out also ends the session on the server.
+- **Optimistic updates.** Adding or removing a show changes the screen immediately and then calls the API. If the call fails, the change is rolled back and an error toast appears. An Undo during a pending add waits for the add to land before removing it.
+- **Schedule or wishlist.** Upcoming shows that are more than a week from airing go on the wishlist; everything else goes on the schedule. The API applies the same rule and moves wishlist shows across when they start airing.
+- **Fresh data.** The library reloads every 10 minutes and whenever the tab regains focus, so air times and countdowns stay current.
+- **Timezones.** All times are shown in the viewer's timezone. The week starts on the current day.
 
 ## Running locally
 
@@ -45,10 +95,10 @@ npm start
 
 The app opens at http://localhost:3000. The API address comes from `REACT_APP_API_URL`, which Create React App reads at build time:
 
-| File               | Used by                         | Value                                                   |
-| ------------------ | ------------------------------- | ------------------------------------------------------- |
-| `.env.development` | `npm start`                     | `http://127.0.0.1:5000`                                 |
-| `.env.production`  | `npm run build` / Vercel builds | `https://anime-web-app-api-production.up.railway.app`   |
+| File               | Used by                         | Value                                                 |
+| ------------------ | ------------------------------- | ----------------------------------------------------- |
+| `.env.development` | `npm start`                     | `http://127.0.0.1:5000`                               |
+| `.env.production`  | `npm run build` / Vercel builds | `https://anime-web-app-api-production.up.railway.app` |
 
 The API only accepts requests from origins listed in its `CORS_ORIGINS` setting, which includes `http://localhost:3000`.
 
