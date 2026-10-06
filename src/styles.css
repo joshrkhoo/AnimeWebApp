@@ -648,6 +648,9 @@ section + section,
 .is-schedule .poster-btn { background: var(--success); color: #0c0d11; }
 .is-wishlist .poster-btn { background: var(--accent); color: #fff; }
 .is-saved .poster-btn:hover { background: var(--surface-3); color: var(--text); }
+.poster-remove { opacity: 0; transition: opacity 0.15s, background 0.15s; }
+.poster:hover .poster-remove,
+.poster-remove:focus-visible { opacity: 1; }
 .poster-title {
   font-weight: 600;
   font-size: 14px;
@@ -911,7 +914,8 @@ section + section,
 /* ---------- Touch: always show remove buttons ---------- */
 
 @media (hover: none) {
-  .show-card-remove { opacity: 1; }
+  .show-card-remove,
+  .poster-remove { opacity: 1; }
 }
 
 /* ---------- Tablet / phone ---------- */

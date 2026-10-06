@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookmarkIcon, CheckIcon, PlusIcon } from './Icons';
+import { BookmarkIcon, CheckIcon, CloseIcon, PlusIcon } from './Icons';
 import { airingDate, countdown, isUpcoming, premiereLabel, showTitle } from './time';
 
 function caption(show, now) {
@@ -18,11 +18,13 @@ const SAVED = {
 /**
  * Poster cards. Clicking a poster opens its details; the corner button adds or removes.
  * `listOf` maps show id -> 'schedule' | 'wishlist' for saved shows.
+ * `removeOnly` is for pages listing saved shows (Wishlist): no saved styling,
+ * just a remove button.
  */
-export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove, onOpen }) => (
+export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove, onOpen, removeOnly = false }) => (
   <ul className="poster-grid">
     {shows.map((show) => {
-      const list = listOf.get(show.id);
+      const list = removeOnly ? null : listOf.get(show.id);
       const upcoming = isUpcoming(show, now);
       const title = showTitle(show);
       const addLabel = upcoming ? `Add ${title} to wishlist` : `Add ${title} to schedule`;
@@ -37,16 +39,27 @@ export const PosterGrid = ({ shows, now, listOf, onAdd, onRemove, onOpen }) => (
                 {SAVED[list].icon} {SAVED[list].label}
               </span>
             )}
-            <button
-              className="poster-btn"
-              onClick={() => (list ? onRemove(show) : onAdd(show))}
-              aria-label={list ? `Remove ${title} from ${list}` : addLabel}
-              title={list ? `Remove from ${list}` : upcoming ? 'Add to wishlist' : 'Add to schedule'}
-            >
-              <span key={list || 'none'} className="pop">
-                {list ? SAVED[list].icon : upcoming ? <BookmarkIcon size={16} /> : <PlusIcon size={16} />}
-              </span>
-            </button>
+            {removeOnly ? (
+              <button
+                className="poster-btn poster-remove"
+                onClick={() => onRemove(show)}
+                aria-label={`Remove ${title} from ${listOf.get(show.id)}`}
+                title="Remove"
+              >
+                <CloseIcon size={16} />
+              </button>
+            ) : (
+              <button
+                className="poster-btn"
+                onClick={() => (list ? onRemove(show) : onAdd(show))}
+                aria-label={list ? `Remove ${title} from ${list}` : addLabel}
+                title={list ? `Remove from ${list}` : upcoming ? 'Add to wishlist' : 'Add to schedule'}
+              >
+                <span key={list || 'none'} className="pop">
+                  {list ? SAVED[list].icon : upcoming ? <BookmarkIcon size={16} /> : <PlusIcon size={16} />}
+                </span>
+              </button>
+            )}
           </div>
           <button className="poster-title" onClick={() => onOpen(show)} tabIndex={-1}>{title}</button>
           <span className="small muted">{caption(show, now)}</span>
@@ -100,7 +113,7 @@ export const WishlistView = ({ shows, onBrowseUpcoming, ...gridProps }) => (
       <span className="muted small">Shows move to your schedule automatically when they start airing</span>
     </div>
     {shows.length ? (
-      <PosterGrid shows={shows} {...gridProps} />
+      <PosterGrid shows={shows} {...gridProps} removeOnly />
     ) : (
       <div className="empty">
         <BookmarkIcon size={28} />
