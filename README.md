@@ -4,7 +4,9 @@ A weekly schedule for the anime you're watching. Add shows that are airing and s
 
 **Live:** https://anime.joshrkhoo.com · **API:** [AnimeWebAppApi](https://github.com/joshrkhoo/AnimeWebAppApi)
 
-![Searching for a show, adding it, and opening its details](docs/demo.gif)
+![Demo: the weekly schedule, searching for and adding a show, its details and streaming links, browsing, wishlisting an upcoming show, and the phone layout](docs/demo.gif)
+
+*Schedule → search and add a show → details and where to watch → Browse → wishlist an upcoming show → Wishlist → on a phone.*
 
 ## Features
 
@@ -19,45 +21,20 @@ A weekly schedule for the anime you're watching. Add shows that are airing and s
 
 Show data (titles, posters, air times, streaming links) comes from [AniList](https://anilist.co) through the API.
 
-## Screenshots
-
-### Schedule
-
-![Weekly schedule with the Up next banner](docs/screenshots/schedule.jpg)
-
-### Show details and where to watch
-
-![Details panel with streaming links, synopsis and info](docs/screenshots/details.jpg)
-
-### Search
-
-![Search dropdown with an Add button](docs/screenshots/search.jpg)
-
-### Browse
-
-Saved shows are outlined and badged: green for your schedule, coral for your wishlist.
-
-![Browse page showing popular airing shows](docs/screenshots/browse.jpg)
-
-### Wishlist
-
-![Wishlist of upcoming shows with premiere dates](docs/screenshots/wishlist.jpg)
-
-### Mobile
-
-<p>
-  <img src="docs/screenshots/mobile-schedule.jpg" alt="Schedule on a phone" width="300" />
-  &nbsp;
-  <img src="docs/screenshots/mobile-details.jpg" alt="Show details on a phone" width="300" />
-</p>
-
-### Log in
-
-![Login screen](docs/screenshots/login.jpg)
-
 ## Tech stack
 
-React 18 (Create React App) and plain CSS, with no other runtime dependencies.
+| Layer          | What it uses                                                                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI             | [React](https://react.dev) 18.3 with function components and hooks (`useState`, `useEffect`, `useMemo`, `useCallback`, `useRef`). No router or state library: views switch on component state. |
+| Build          | [Create React App](https://create-react-app.dev) 5 (`react-scripts` 5.0.1: webpack 5, Babel, ESLint)                                                                          |
+| Styling        | One hand-written stylesheet (`src/styles.css`): CSS custom properties for the colour theme, Grid and Flexbox layouts, and breakpoints at 900px and 640px. No CSS framework.   |
+| Fonts & icons  | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) from Google Fonts; icons are inline SVG components (`src/Icons.jsx`)                                   |
+| Data           | Browser `fetch` to the [Flask API](https://github.com/joshrkhoo/AnimeWebAppApi), which proxies the [AniList GraphQL API](https://docs.anilist.co). `AbortController` cancels stale searches. |
+| Dates & times  | Built-in `Intl` / `toLocale*String` formatting in the viewer's timezone. No date library.                                                                                     |
+| Session        | Bearer token kept in `localStorage`                                                                                                                                           |
+| Hosting        | [Vercel](https://vercel.com) static hosting; `anime.joshrkhoo.com` points to it with a DNS CNAME                                                                               |
+
+The only runtime dependencies are `react` and `react-dom`.
 
 ## Project structure
 
@@ -73,7 +50,7 @@ src/
   time.js         Date formatting, week grouping, wishlist rule
   Icons.jsx       Inline SVG icons
   styles.css      All styles
-docs/             README screenshots and demo GIF
+docs/demo.gif     Demo GIF used in this README
 ```
 
 ## How it works
